@@ -1,0 +1,24 @@
+\chapter{Introduction}
+
+Game playing always presented an attractive tasks for artificial intelligence research. Already in the early 1950ies, in the wake of the first programmable computers, games have drawn the attention of researchers. Chess had been tackled by early computer scientists like Konrad Zuse, Claude Shannon (the inventor of information theory), Norbert Wiener (the creator of modern control theory) or Alan Turing \cite{Friedel2002}.
+
+Also in the fifties, the first academic research of poker was conducted. Since computers were still way to slow to provide any assistance to analyze a full fledged poker game, \cite{Kuhn1950}Êinvented his own simple version of poker. For this very simple version, consisting only of a deck of three cards, two players with one hole card each, one betting stage and no community cards, Kuhn was able to calculate a complete equilibrium solution. He demonstrated that there are many game theoretic optimal strategies for the first player in this game, but only one for the second player, and that, when played optimally, the first player should expect to lose at a rate of $-\frac{1}{18}$ per hand. 
+
+Since then, there has been steady progress in the standard of play strength of artificial intelligent algorithms, to the point that machines have surpassed humans in Checkers and Othello, have defeated human champions in Chess and Backgammon, and are competitive in many other games. Few exceptions remain, one being Go, where computers notoriously perform weak, and poker, where tremendous progress has been made in the last decade, but a wealth of unsolved problems still remain.
+
+As \cite{Russell2003} mentions, game are interesting because they often are too hard to solve. Chess has an average branching factor of about 35, with games often going to 50 moves per player, so the search tree has about $35^100$ (or $10^154$) nodes. 
+Games, like the real world, therefore require the ability to make some decision even when calculating the optimal decision is infeasible. Games also penalize inefficiency severely. Whereas an implementation of a algorithm is half as efficient will simply cost twice as much to run to completion, a game program that is half as efficient in using its available time probably will be beaten into the ground.
+
+In poker, the actual game tree does not branch as much as in chess, but the addition of chance imperfect information pose challenges of similar amplitude. Kuhn Poker remains one of the few simple examples, where a complete solution has been found, with even simple (compared to other poker variants) variants like Heads-Up Limit Texas Hold'em still remaining a challenge.
+
+\section{About Poker}
+Poker is a well-known card game which gained a lot of popularity in the last years, thanks to plenty of online sites, offering to play the game online with real cash. 
+
+Poker proceeds in stages, in each stage, cards are dealt (some of which are dealt face down only for one player to see and some of which are dealt face up for all players to see).  Players then wager against each other that their hand of cards is the best, or will be the best when the hand is played to the end. 
+
+To remain active in the game, and keep a chance to win all the wagered chips, a player must match the amount of money bet by each of their opponents. If one player makes a bet that no opponent matches, then the game ends immediately with that player winning the game and all the bets placed and matched so far (the pot) - regardless of the cards they actually had. In the other case, if all bets are matched, play continues into the next stage, until there are no stages left in the game, and all active players reveal their cards in a showdown. The player with the highest ranked hand at that point then wins the pot.
+
+Because each player only knows their own cards, and the common board cards, but lacks information about their opponents' hole cards, poker is an example of a domain of imperfect information.
+
+While for most of the last century limit poker was popular, the focus of a lot of players has shifted to No-Limit variations of the game. Unlike with limit poker, in No-Limit Poker the possible wagers a player can do are only limited by the amount of chips he owns. This thesis will mainly focus on the No-Limit variant.
+

@@ -1,0 +1,72 @@
+####################################
+# Frutiger Font Installation Notes #
+####################################
+
+Linux Installation Notes
+========================
+
+Usual location of texmf folder:
+Linux: /usr/share/texmf
+
+1/ Copy the file frutiger.tar.gz into the parent directory of your texmf
+folder (probably /usr/share).
+
+2/ Unzip the file.
+
+3/ Edit the file texmf/dvips/config/config.ps with your favorite editor, e.g.
+vi or ed.
+
+4/ Change the line "% p +myfonts.map" to "p +frutiger.map".
+
+5/ Execute "texhash"; under Windows use the MikTex configuration manager to
+rebuild the font library.
+
+6/ Test the new font by replacing the current sans serif font with the new
+Frutiger font:
+
+\renewcommand{\sfdefault}{pfr}
+\sffamily{Test}
+
+Then, "Test" should be in Frutiger font.
+
+Windows Installation Notes
+==========================
+
+Usual location of texmf folder:
+
+C:\texmf
+
+1/ Copy the file frutiger.tar.gz into the parent directory of your texmf
+folder (probably C:\).
+
+2/ Unzip the file.
+
+3/ Edit the file c:\texmf\miktex\config\updmap.cfg. (In case it
+does not yet exist, create it as a new file.)  Add the line
+
+Map frutiger.map
+
+and save the file; then execute the following commands 
+in a command line window ("DOS shell"):
+
+initexmf -u
+updmap
+
+For more help consider:
+http://www.tug.org/tex-archive/nonfree/fonts/urw/garamond/README.garamond
+
+Mac Installation Notes
+======================
+
+Installing the Frutiger Font under Mac should be similar to Linux. However, the
+following installation notes have also proven to work for Mac OS X:
+
+1/ Store frutiger.map in /usr/local/texlive/2007/texmf-dist/fonts/map/
+
+(/Macintosh HD/Library/teTeX/texlive/2007/texmf-dist/fonts/map/)
+
+2/ Excute the command: updmap --enable Map=frutiger.map
+(sudo updmap-sys --enable Map=frutiger.map)
+
+More information can be found here:
+http://email.esm.psu.edu/pipermail/macosx-tex/2007-June/031062.html

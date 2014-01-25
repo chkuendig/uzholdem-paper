@@ -1,0 +1,143 @@
+%%
+%% This is file `ddis_thesis-EN.tex'
+%% Change log
+%%
+%% 20.10.05 initial version                 Christoph Kiefer (ck)
+%% 13.12.05 textwidth enlarged              ck
+%% 15.05.06 caption error removed           ck
+%%          README update
+%% 18.05.08 added apalike_brackets package  ck
+%%         (thanks to Andreas Bossard)
+%%
+
+%==============================================================================
+% Prolog
+%==============================================================================
+
+\documentclass{ddis-thesis-EN}
+% Include AMS extension for formulas
+\usepackage{amssymb}
+
+% Use PostScript fonts instead of LaTeX bitmap fonts (better for PDF)
+\renewcommand{\rmdefault}{ppl}
+% use Frutiger font
+\renewcommand{\sfdefault}{pfr}
+\renewcommand{\ttdefault}{pcr}
+
+% Use advanced graphics inclusion and caption styles
+\usepackage[pdftex]{  hyperref,bookmark,graphicx} 
+\usepackage{epstopdf}
+
+\usepackage{caption}
+\renewcommand{\captionlabelfont}{\sffamily\bfseries}
+\renewcommand{\captionfont}{\sffamily}
+
+% Use subfigure and change the numbering style for subfigures
+\usepackage{subfigure}
+\renewcommand{\thesubfigure}{\alph{subfigure}}
+\makeatletter
+\renewcommand{\@thesubfigure}{(\thesubfigure)\space}
+\renewcommand{\p@subfigure}{\thefigure}
+\makeatother
+
+% Use color package and define background and frame color for text boxes
+\usepackage[pdftex]{color}
+% Use label replacement for postscript figures
+\usepackage{psfrag}
+% Use Changebar
+\usepackage{changebar}
+% Use url
+\usepackage{url}
+% Use longtable environment
+\usepackage{longtable}
+% break citations
+\usepackage{apalike_brackets}
+% include TOC extensions for all Indexes
+\usepackage{tocbibind}
+% Redefine the headers with the fancyhdr package
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\renewcommand{\chaptermark}[1]{\markboth{\chaptername \ \thechapter.\ #1}{}}
+\renewcommand{\sectionmark}[1]{\markright{\thesection\ #1}}
+\fancyhf{}
+\fancyhead[LE,RO]{{\sffamily{\bfseries\thepage}}}
+\fancyhead[LO]{{\sffamily{\rightmark}}}
+\fancyhead[RE]{{\sffamily{\leftmark}}}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0pt}
+\addtolength{\headheight}{0.5pt}
+\fancypagestyle{plain}{
+  \fancyhead{}
+  \renewcommand{\headrulewidth}{0pt}
+}
+
+%configure listings package
+\lstset{ captionpos=b}
+
+% Clear Header Style on the Last Empty Odd pages
+\makeatletter
+\def\cleardoublepage{\clearpage\if@twoside \ifodd\c@page\else%
+    \hbox{}%
+    \thispagestyle{empty}%              % Empty header styles
+    \newpage%
+    \if@twocolumn\hbox{}\newpage\fi\fi\fi}
+\makeatother
+
+\setlength\textwidth{15cm}
+\setlength\oddsidemargin{3.5cm}
+\setlength\evensidemargin{2.5cm}
+
+\renewcommand\bibname{Bibliography}
+
+%==============================================================================
+% Begin of document
+%==============================================================================
+
+\begin{document}
+
+\frontmatter
+
+\include{section-title/title}
+
+\setlength{\hoffset}{-1in}
+
+\fancyheadoffset[RO,LE]{2.5cm}
+\fancyhfoffset{0in}
+
+\include{section-acknowledgements/acknowledgements}
+\include{section-abstract/abstract}
+\include{section-abstract/zusammenfassung}
+
+\tableofcontents
+
+\mainmatter
+
+% arabic numbering after this
+\pagenumbering{arabic}
+
+\include{section01-introduction/introduction}
+\include{section02-motivation/chapter1}
+\include{section03-gametree/chapter2}
+\include{section04-opponentmodel/chapter3}
+\include{section06-implementation/chapter4}
+\include{section07-results/chapter5}
+\include{section08-limitations/limitations}
+%\include{section09-futurework/futurework}
+\include{section10-conclusions/conclusions}
+
+% Appendix
+\begin{appendix}
+\renewcommand{\chaptermark}[1]{\markboth{\appendixname \ \thechapter.\ #1}{}}
+\include{section-appendix/appendix}
+\end{appendix}
+
+\listoffigures \listoftables
+
+\lstlistoflistings \addcontentsline{toc}{chapter}{List of Listings}
+
+% Bibliography
+\bibliographystyle{apalike-url}
+\bibliography{section-references/thesisbib}
+
+
+\end{document}

@@ -1,0 +1,7 @@
+Anything you put in this folder is seamlessly uploaded to Dropbox
+and available online.
+
+We'd love to hear what you think. E-mail us at beta@getdropbox.com
+or visit our forums (http://getdropbox.com/forum) anytime.
+
+- The Dropbox Team

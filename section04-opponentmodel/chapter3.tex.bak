@@ -1,0 +1,787 @@
+\chapter{Opponent Modelling}
+\label{c:opponentmodelling}
+
+After having outlined the algorithms necessary to make a decision based on the game context, there still stays an unresolved issue; how to determine the probability distribution of an opponents possible action and the hands he might hold.  Both in computer as in human poker, a good judgement of the opponent is essential. A player must be able to predict the opponents actions, as well as figuring out what cards he might hold. Essentially, the target is to estimate the missing information in this game of imperfect information. To achieve this, a model of the opponent mhas to be created. This model could be very generic - based on historic averages, or game-theoretic optimas, both totally static models.  But playing good poker also includes adapting to a specific player, learning his strenghts and weaknesses and exploiding them. To achieve this, the opponent model can't be merely static, but has to adapt to the current opponent, or even the current style the current opponent is playing. To beat masters of the game, we would require a model that never reaches a finite conclusion, but continues to learn throughout the whole game.
+
+Little surprisin, as \cite{Pena1999} has shown, specific (based on the current opponent) opponent modelling outperforms generic (game theoretic etc.) opponent modeling.
+
+As explained, the reason for a opponent model is to predict actions and card strenghts. To achieve this, there exist a multitude of methods. From basically non-modelling but calculating the game theoric best actions (used in all basic game theoretic methods of \cite{Gilpin2006} \cite{Johanson2007} or \cite{Miltersen2007}, used in \cite{Billings2006b} and \cite{Schauenberg2006} as a default prior of the model), 
+
+"`At the heart of an opponent modelling system is a predictor. ...."' \cite{Davidson2002}
+
+
+\begin{quotation}
+When humans play games, especially at a more professional level, they analyse
+previous games played by their opponent to become familiar with the strategies
+used by the opponent, its strengths and weaknesses. Even when playing against
+an unknown player, they will create, during the game, a model of the opponent,
+based on some features of the opponent’s behaviour (e.g., an impatient, aggress-
+ive chess player). Such a model of the opponent can be used to the players own
+advantage
+[...]
+Another approach is reported in (Carmel and Markovitch 1993). They make the assumption that each player basically uses a minimax algorithm to decide upon its next move. Their model of the player is the evaluation function used by the player and the depth of his search tree. They also make the assumption that the evaluation function is a linear function of the observed attributes of the
+game state. 
+\end{quotation} \cite{Jacobs2004}
+
+\section{Challenges in Opponent Modelling}
+
+As we have seen in the last chapter, for poker, we need our opponent model to predict two things in the game tree. First, what action a player might take, given a certain situation. Second, how strong his cards might be, given a certain situation. As we will see, this task faces challenges, shared with many other machine learning or data mining problems. \cite[p.36-37]{Davidson2002} summarizes them as follows:
+
+\begin{itemize}
+	\item \textbf{Uncertainty:} Thanks to the numerous unkown cards in a game, poker games always include a great deal of noise. Each hand of poker can be completely different to the previous one, simply because of the variance of cards dealt. Both to the hands as well as to the board. Because of this, a very large number of hands must be played bevor even very common situations are encountered severel times.
+	\item \textbf{Missing Infomation:} Only the player and his opponent play to the end of a hand, cards are actually shown. In heads-up only a very small percentage of hands are revealed. Because of this, the opponent model can only be verified on the very few hands the player as well as the opponent take to the showdown. Additionally, these hands are obviously heavily biased (players always try to avoid taking bad hands to a showdown - either by folding or by getting the opponent to fold).
+	\item \textbf{Unknown Dimensions:} It's never completely known what variables, and how many of them affect how a player plays a hand. Some factors might be much more important than others, and some aren't of concer for every player. One might put importance into their position in the betting round, while others only adapt lightly to their position. To find the apropriate correlations is important, but very difficult. 
+	\item \textbf{Intuition:} Thanks to intuition and past experience, good human Players are able to form an elaborate model of the opponent based on only a small number of obervations. If experienced, they can also challenge their model to test a theory about an opponent. In contract, most machine learning methods typically need a large number of observations. These methods are not only slow, but also passive.
+	\item \textbf{Multiple Levels:} If we model an opponent based on how he plays against another player, we can't regress his behviour playing against us, at least not if he is also modelling his opponents. So we need find a "`pure"' model (the opponents behviour minus his adaptions to a certain player) as well as how he models opponents. (or how he models how we model, etc...)
+	\item \textbf{Moving Targets:} To play good poker also means to constantely change once behaviour, simply to add noise to the opponents observations. This and the fact that the opponent might change his model about us, presents the problem that the opponent model has to be changed constantely, and that once we achieve a solid model, this model is already outdated. \begin{quotation}
+Theoretically, this is a more challenging learning task than most of the problems studied in the machine learning and AI literature. Unlike most Markov decision process (MDP) problems, we are not trying to determine a static property of the domain, but rather the dynamic characteristics of an adversarial opponent, where historical perspective is essential.
+\end{quotation} \cite[p.116]{Billings2006} 
+
+\end{itemize}
+
+
+To summarize, Opponent Modelling appears to have typical characteristics to make it a challenging most machine learning problems, noise, uncertainty, unknown relations, and the need to quickly generalize from a small set of examples - often with wrong or misleading data.  
+
+
+\section{Opponent Modelling Techniques}
+\label{opponent-modelling-techniques}
+As we don't know the hands of the opponent, we can't perfectly predict what an opponent play, but a distribution of actions. Considering machine learning, an opponent model is a predictor of the opponent. In the data mining approach outlined later, it's simply a matter of classifing a certain decision point or game situation into possibilite opponent action classes. \cite[p.37]{Davidson2002} outlines the basic methods of opponent modeling, which are shortly outlined hereby. Most of these techniques can also be used in the later explained Weka Data Mining Framework and can be applied in the algorithm descripted in chapter ~\ref{c:imperfectinformation}.
+
+ \textcolor{red}{TODO: incorporate \cite{Southey2009}}
+
+\subsection{Expert Systems}
+Expert Systems are implementing a generic opponent model, crafted after human knowhow and implemented as a set of rules. One way would be to predict an opponent action based on our own betting strategy, or advice out of a poker strategy book. Expert Systems normally aren't very effective, since they scale very bad for complex problems, but they are a good start for a opponent model, per example before any knowhow about a specific opponent could be collected.
+
+\subsection{Statistics}
+\label{s:statistics}
+Another rather obvious method of predicting an opponent is observing his past actions, assuming he would act the same or similar in the future. If he raised 10\% of our bets on the flop, after a lot of action already happened pre-flop, we might infert that the next time such a situation occurs, the possibility of our opponent to raise is 10\%. Such a historic table of actions, essentially is a set of conditional action probabilities such as $P(raise|betsSoFar=1,stage=river)$ - describing the probability of a raise, given there was one bet this hand so far, and the decision will be made on the river. 
+
+One such model, is the histogram-based approach by \cite{Schauenberg2006} and \cite{Billings2006b}. 
+Essential for using such statistical modelling, it a good abstraction of the game context. The context tree they used is an explicit representation of the imperfect information game tree, having the same skeletal structure with respect to decision nodes. Chance nodes in the tree are represented implicitly (all possible chance outcomes are accounted for during the EV calculation).
+
+A leaf node of the context tree corresponds to all of the leaves of the game
+tree with the same betting sequence (regardless of the preceding chance nodes).
+Associated with this is an efficient data structure for maintaining the empirically
+observed action frequencies and showdown histograms for the opponent. For this
+we use a trie, based on the natural prefix structure of related betting sequences.
+Hash tables are used for low-overhead indexing.
+
+ In poker, two situations rarely happen twice, even after millions of hands, so the need for generalisation arises. For their Miximax-based Bots, the used a collection of histograms with different levels of generalisation. To learn faster and base their inferences on more observations, \cite{Billings2006b} use various different context trees with different granulation, and combine multiple contexts with high mutual correlation.  This allows them to generalize the observations made, and apply that knowledge to other related situations.
+
+ One big problem with a statistical approach to opponent modelling is the zero frequency problem, when there has not yet been any observations for a given context - and more generally, how to initialize the context tree with good default data. \cite{Billings2006b} depend on results from nash equlibrium strategies, to devise default data based on the assumption of optimal play.
+ 
+The finest level in the abstraction is the context tree itself, where every possible betting sequence is distinct, and a different histogram is used for each. This basically is a reproduction of all possible game situations.  The
+opponent action frequencies are determined from the number of times each action was chosen at each decision node (they also used a decay factor, to strengthen recent observations). Unfortunately, having little data in each class will result in unreliable inferences.
+
+With testing, they concluded, that the most coarse-grained abstraction would solely hold the sum of the total number of raises by both player (no longer distinguishing which player initiated the action) - in total only nine distinct classes. Despite the crudeness of this abstraction, the favourable effects of grouping the data is often more important than the lower expected correlations between those lines of play. Another similar type of coarse-grained abstraction considers only the final size of the pot, adjusting the resolution (ie. the range of pot sizes) to provide whatever number of abstraction classes is desired.
+
+A less coarse-grained abstraction groups all betting sequences where the opponent made an equal number of bets and raises throughout the hand, ignoring what stage of the hand they were made. A finer-grained version of the same idea maintains an ordered pair for the number of bets and raises by each player.
+
+As this abstraction system of  \cite{Billings2006b} is hierarchical, there also has to be spent some consideration into the weight of the different tiers of abstraction. This is based on the number of actual observations covered at each level, striving for an effective balance, which will vary depending on the opponent.
+
+Their method of combining different abstraction classes is based on an exponential mixing parameter (e.g. $m = 0.95$). With the lowest-level context tree (no abstraction) be called A0, a fine-grained abstraction be called A1, a
+cruder collection of those classes be called A2, and the broadest classification (only potsize or only count of bets)
+level be called A3. Suppose the showdown situation in question has five data
+points (earlier observations) that match the context exactly, in A0. This data is given a weight of
+$1-m^5 = 0.23$ of the total. If the next level of abstraction, A1, has 20
+data points (including those from A0), it is assigned $1-m^20 = 0.64$ of the
+remaining weight, or about 50\% of the total. The next abstraction level might
+cover 75 data points, and be given $1-m^75 = 0.98$ of the remainder, or
+26\% of the total. The small remaining weight is given to the crudest level of
+abstraction. Thus all levels contribute to the overall profile, depending on how
+relevant each is to the current situation.
+
+
+\cite{Schauenberg2006} and \cite{Billings2006b} use various different abstractions of situations and weights them differently before predicting a situation. One extreme would be the exactly same situation, another every other situation with the same amount of player actions in the hand so far. Based on this  \cite{Billings2006b}  specified 8 different abstractions which he averaged to calculate the action distribution of possible actions. \cite{Schauenberg2006}, \cite{Billings2006b} and \cite{Davidson2002} don't take the public board cards into consideration when looking for similar situations.
+Establishing a suitable model on how broad or narrow a situation should be specified is no easy task. There's an obvious trade-off of being either to narrow, so there are not enough samples to base assumptions from, or being to broad, so estimations will be vulnerable to over-fitting. 
+Furthermore, each player acts differently. One might be very affine to flush draws and play them very aggressively, another might put a lot of weight in his current chip stack before deciding how to act. To model this, a meta-model would have to be built of the player, to specify which parameters are weighted how much in the modelling process. 
+Using data mining algorithms and a very large set of parameters might be a good approach for this problem, since figuring out the weight of the different parameters is a common problem in other classifying problem.
+
+\begin{quotation}
+Another obvious method for predicting opponent actions is to expect them to con-
+tinue to behave as they have done in the past. For example, if an opponent is
+observed to bet 40\% of the time immediately after the flop, we might infer that
+they will normally bet with the top 40\% of their hands in that situation (perhaps
+including a certain percentage of weak hands that have a good draw). When we
+use an opponent's personal history of actions to make predictions, we call it specific
+opponent modeling. As one would expect, specific opponent modeling outperforms
+generic opponent modeling \cite{Pena1999}.
+
+Our first opponent modeling effort was based on the collection of simple statis-
+tical information, primarily on the betting frequencies in a variety of contexts. For
+example, a basic system distinguishes twelve contexts, based on the betting round
+(pre-flop, flop, turn, or river), and the betting level (zero, one, or two or more bets).
+This history table is essentially a set of conditional action probabilities such as
+P(Call j River \& OneBetToCall). However, this is a very limited definition of
+distinct contexts, since it does not account for many relevant properties, such as
+the number of active opponents, the relative betting position, or the texture of the
+board cards (eg. whether or not many draws are possible). Establishing a suitable
+set of conditions for defining the various situations is not an easy task. There are
+important trade-offs that determine how quickly the algorithm can learn and apply
+its empirically discovered knowledge. If a context is defined too broadly, it will fail to
+capture relevant information from very different circumstances. If it is too narrow,
+it will take too long to experience enough examples for each scenario, and spotting
+general trends becomes increasingly difficult. Equally important to deciding how
+many equivalence classes to use is knowing what kinds of contextual information
+are most relevant in practice.
+
+Furthermore, there are many considerations that are specific to each player. For
+example, some players will have a strong affinity for flush draws, and will raise or re-raise on the flop with only a draw. Knowing these kinds of personality-specific
+characteristics can certainly improve the program's performance against typical hu-
+man players, but this type of modeling has not yet been fully explored.
+\end{quotation} \cite{Davidson2002}
+\begin{quotation}
+After each hand is played against a particular opponent, the observations made
+during that hand are used to update our opponent model. The action decisions
+made by the opponent are used to update the betting frequencies corresponding
+to the sequence of actions during the hand. When showdowns occur, the hand
+rank (HR) shown by the opponent is used to update a leaf node histogram, as
+illustrated in the previous section.
+
+The context tree is an explicit representation of the imperfect information
+game tree, having the same skeletal structure with respect to decision nodes.
+Chance nodes in the tree are represented implicitly (all possible chance outcomes
+are accounted for during the EV calculation).
+
+A leaf node of the context tree corresponds to all of the leaves of the game
+tree with the same betting sequence (regardless of the preceding chance nodes).
+Associated with this is an efficient data structure for maintaining the empirically
+observed action frequencies and showdown histograms for the opponent. For this
+we use a trie, based on the natural prefix structure of related betting sequences.
+Hash tables are used for low-overhead indexing.
+
+6.1 Motivation for Multiple Abstractions
+
+The Miximax and Miximix search algorithms perform the type of mathematical
+computation that underlies a theoretically correct decision procedure for poker.
+For the game of two-player Limit Texas Hold'em, there are 9 4 = 6561 show-
+down nodes for each player, or 13122 leaf-level histograms to be maintained and
+considered. This fine level of granularity is desirable for distinguishing different
+contexts and ensuring a high correlation within each class of observations.
+
+However, having so many distinct contexts also means that most betting
+sequences occur relatively rarely. As a result, many thousands of games may
+be required before enough data is collected to ensure reliable conclusions and
+effective learning. Moreover, by the time a sufficient number of observations have
+been made, the information may no longer be current.
+
+This formulation alone is not adequate for practical poker. It is common
+for top human players to radically change their style of play many times over
+the course of a match. A worthy adversary will constantly use deception to
+disguise the strength of their hand, mask their intentions, and try to confuse our
+model of their overall strategy. To be effective, we need to accumulate knowledge
+very quickly, and have a preference toward more recent observations. Ideally, we
+would like to begin applying our experience (to some degree) immediately, and
+be basing decisions primarily on what we have learned over a scope of dozens or
+hundreds of recent hands, rather than many thousands. This must be an ongoing
+process, since we may need to keep up with a rapidly changing opponent.
+
+Theoretically, this is a more challenging learning task than most of the prob-
+lems studied in the machine learning and artificial intelligence literature. Unlike
+most Markov decision process (MDP) problems, we are not trying to determine
+a static property of the domain, but rather the dynamic characteristics of an
+adversarial opponent, where historical perspective is essential.
+
+In order to give a preference toward more recent data, we gradually "`forget"'
+old observations using exponential history decay functions. Each time an obser-
+vation is made in a given context, the previously accumulated data is diminished
+by a history decay factor, h, and the new data point is then added. Thus for
+h = 0:95, the most recent event accounts for 5\% of the total weight, the last
+1=(1 h) = 20 observations account for (1 1=e) = 0:63 of the total, and
+so on.
+\end{quotation}
+\cite{Billings2006b}
+
+
+\subsection{Neural Networks}
+\label{s:neural-networks}
+Neural Networks can be used for a variety of classification tasks. The simple \textit{perceptron learning rule} can be used to learn the weights for a linear hyperplane - simillar to regression models. 
+
+$w_0 a_0 +w_1 a_1 +w_2 a_2 + . . . +w_k a_k = 0.$ \ref{fig:perceptron}
+
+Here, a1, a2, . . ., ak are the attribute values, and w0, w1, . . ., wk are the weights
+that define the hyperplane, separating the instances in different classes in the instance space. Because of beeing inspired by natural neurons, these perceptrons are often also called artificial neurons - therefore the term neural network. Despite each perceptron beeing rather simple, neural networks are capable of solving difficult tasks thanks of a vast number of neurons and massive interconnection. These allows a problem to be decomposed into subproblems, which then are solved at the neuron level \cite{Witten2005}. 
+
+Neural Networks are easy to build automatically without any domain-specific knowledge and tend to provide reasonable accuracy, especially in noisy domains. As \cite{Davidson2002} mentions, Neural Networks ahve been used with success in backgammon programs (such as the already mentioned TD-Gammon by \cite{Tesauro2002}). Neural Networks ability to handle noisy domains suits well in problems with stochastic elements - such as poker or backgammon. 
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{section-chapter3/figures/perceptron}
+\caption[Figure Caption.]{A perceptron. \cite{Witten2005}}
+\label{fig:perceptron}
+\end{figure}
+
+A neural network consists of neurons, or nodes, which are connected to each other
+by weighted directed edges. Problem data is fed into input nodes, which are connected to internal (or "`hidden"') nodes, which themselfs are connected to a set of output nodes (the solution data). The weighted connections between these nodes can be both of negative or positive weight. They transform the signal from the input nodes, through the the internal nodes to the output nodes. Simmilar to biological neurons, the internal nodes "`fire"', if the weighted sum of all connections entering reaches a certain threshold function. If this is fullfilled, they send a signal to the output nodes (or another layer of internal nodes). The output can be either discrete (they send a 1 if the threshold is reached, and a 0 if it isn't) or continous if a sigmoid function is used to produce a smoother output.  \cite{Minsky1954}, \cite{Witten2005}
+
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{section-chapter3/figures/simple-neural-network}
+\caption[Figure Caption.]{\cite{Davidson2002}}
+\label{fig:simple-neural-network}
+\end{figure}
+
+Figure \ref{fig:simple-neural-network} shows a basic neural network, with the four input nodes on the top, two internal nodes (one hidden layer) in the middle, and the single output node on the bottom. Weights are represented by the thickness of the connection.In this example, the internal neurons use a threshold function to decide their outputs, and the output neuron uses a sigmoid function to decide its output. The two input neurons have different thresholds for firing. This is known as a bias, and
+each neuron can have a positive or negative bias affecting it.
+
+Depending on the input values, and the relative values of the weights, each of
+the internal neurons may or may not fire, which in turn will effect the value of the
+output neuron. The first internal neuron may only fire when a particular pattern
+of inputs is detected. Building the correct set of connection weights to get the desired outputs is the "`learning"' part in neural networks.
+
+
+\subsubsection{Backpropagation}
+To "`learn"' these weights, a algorithm called backpropagation is used. \cite{Rumelhart1986} With backpropagation, the correct answer of a training instance is worked backwards through the neural network, starting from the output and ending back at the input. The output on node $i$, $O_i$ is compared to the correct answer (in our case the correct classification) to calculate the network's error $E_i$. Starting with the weights at the ouptut nodes, the weights are adjusted until the error $E_i$ is reduced. Each weight is adjusted proportionally to its contribution to the error.
+
+Wo calculate the contribution to the error for a connection $W_j,i$ from a internal node $j$ to an output node $i$, the error at the output node $E_i$ is multiplied by the derivative of the activation g along the input value $I_i$ to the node.
+
+	\begin{equation}
+	\Delta_i = E_i \ast g' I_i
+	\end{equation}
+
+
+\begin{quotation}
+ 
+This determines both the direction of the error, as well as the share of the blame
+this weight had on the error realized at the output. The weight is updated by adding
+the $\Delta_i$ (i.e. its share of the error) times the activation level ($O_j$ ). A learning rate
+ff is also used to increase or decrease the amount of change made to the weight for
+each training example. A high learning rate will allow the network to converge more
+quickly, but it may overstep the correct configuration.
+
+
+	\begin{equation}
+	W_{j,i} \Leftarrow W_{j,i} + \alpha  \ast O_j  \ast \Delta_i
+	\end{equation}
+
+After updating the weights in the output layer, the blame for the errors at the
+output layer is propagated into the internal layer, since it is likely to share in causing
+the error. The blame for error at an internal node connection is determined as:
+
+
+	\begin{equation}
+	\Delta_j = g' I_j \sum_i W_{j,i} \Delta_i
+	\end{equation}
+
+
+The new delta is computed by propagating the deltas from the output layer.
+The reweighting rule is essentially the same as the output layer reweighting equation.
+
+With each training example, the error in the network is determined and the
+weights are modified using this backpropagation method. The learning rate ff de-
+termines the magnitude of the changes made during reweighting. As a network is
+trained on each sample, the weights are adjusted to minimize the error. All of the
+weights in the network are modified proportionaly with respects to their relative
+contribution to the total error. After several training iterations, the network usu-
+ally converges to a set of weights that minimizes the error over all examples in the
+training set.
+\end{quotation}
+\cite{Davidson2002}
+
+Further in-dept explanations of backpropagation can be found in \cite{Russell2003}, \cite{Witten2005} and \cite{Rumelhart1986} 
+
+\subsubsection{Poker Neural Nets}
+\cite{Davidson2002} trained a standard multi-layer perceptron (also known as feed-forward neural net) on contextual data collected from online games against human opponents. His network contain a set of eighteen inputs corresponding to properties of the game context, such as number of active player (his program - \texttt{Poki} - was built for ring games), texture of the board, opponent's position, the full list is shown in table \ref{fig:poki-input-nodes}.
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{section-chapter3/figures/poki-input-nodes}
+\caption[Figure Caption.]{Poki neural network input nodes \cite{Davidson2002}}
+\label{fig:poki-input-nodes}
+\end{figure}
+
+The output layer consists of the possible actions an opponent might take (this version of \texttt{Poki} was built for limit-poker, so theres only three possible actions: fold, call or raise). By graphically displaying the relative connection strengths, it's possible to determine which input parameters
+have the largest effects on the output. After observing networks trained on many different opponents, it is clear that certain factors are dominant in predicting the
+actions of most opponents, while other variables are almost completely irrelevant. \cite{Davidson2002}
+
+The inputs encode the knowledge of the player about the game context. All inputs are encoded to values between zero and one. The current betting round for example is encoded using two boolean input. On the flop, both inputs \#5 and \#6 are zero, if it is the turn, \#5 is set to one, and so on. \cite{Davidson2002} has also included additional expert information about the current context. Input \#13 and \#14 are the estimated hand strength - something which isn't necessairy to know with the miximax-algorithm explained in chapter \ref{c:imperfectinformation}. Inputs \#15 and \#16 indicate what an expert-buildet formula based system would do in this context. 
+
+Figure \ref{fig:poki-neural-network} shows a resulting neural network from \cite{Davidson2002} after a few hundred hands trained from plays by a particular opponent. 
+
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{section-chapter3/figures/poki-neural-network}
+\caption[Figure Caption.]{The resulting neural network for Poki \cite{Davidson2002}}
+\label{fig:poki-neural-network}
+\end{figure}
+
+\begin{quotation}
+Figure 4.2 shows a typical neural network after being trained on a few hundred
+hands played by a particular opponent. The inputs are on the top row, with the
+activation level ranging from zero (fully white) to one (fully black). The thickness
+of the lines represent the magnitude of the weights (black being positive, grey being
+negative). In this example, the connections from input node number eight (true if
+the opponent's last action was a raise) are very strong, indicating that it is highly
+correlated with what the opponent will do next. The bottom row shows the network
+predicting that the opponent will probably bet, with a small chance of checking.
+By examining the graphical representations of neural nets trained on an oppo-
+nent, the public game features that have the highest correlations with the opponent's
+actions can be spotted. Inputs that are strongly correlated with the actions, will
+have relatively stronger weights (i.e. line thickness). Early experiments helped re-
+veal strong indicators for detecting how an opponent will play. It also became clear
+that many strong factors could differ significantly between each specific opponent.
+The first result of this study was the identification of new features to focus on
+when modeling common opponents. This produced a relatively small set of context
+equivalence classes which significantly improved the statistical opponent modeling
+reported previously \cite{Davidson2000}. It was discovered that the player's last action is highly
+correlated with their future actions. This makes intuitive sense - if a player has
+just bet, there is a very small chance they will fold, and a much larger chance that
+they will call or raise. Likewise, if their last action was to check, then there is a
+much higher chance they will fold, rather than raise. As a result, the player's last
+action was added to the context of the action frequency statistics. This improved
+the accuracy of the statistics by 10-to-20\% on average.
+\end{quotation}
+\cite{Davidson2002}
+
+\cite{Davidson2002} came to the conclusion, that the bigges drawback with neural networks is that they aren't trained on a proper probability distribution, but the actual event. For this reason, they don't output a distribution which is skewed to the most possible outcome and not the most acurate distribution. Nevertheless, they allow a much deeper evaluation, since the underlying logic can be graphically illustrated and analysed. Obviously wrong learning tendencies can be avoided this way. 
+
+
+\subsection{Decision Trees}
+Decision trees are another well known way to solve classification problems. Nodes in a decision tree involve testing a particular attribute. In general, the test at a node compares an attribute value with a constant. Leaf nodes give a classification that applies to all instances that reach the leaf, or more suitable for poker, a probability distribution over all possible classifications. A unkown instance is routed down the tree according to the values of the attributes tested in successive nodes, and when a leaf node is reached, the sample (or instance in the data mining framework explained later on) classified according to the class assigned to that specific leaf. \cite[p.62]{Witten2005}
+
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{section-chapter3/figures/decision-tree}
+\caption[Figure Caption.]{\cite{Davidson2002}}
+\label{fig:decision-tree}
+\end{figure}
+
+\cite{Davidson2002} used a Decision Tree Induction software \cite{Utgoff1989} to study decision trees for action prediction. Due to the high amount of noise in poker, they opted to train with tree prunning. INSERT PRUNING EXPLANATIUON (Witten2005) This decreases the possiblility of over-training. Test have shown that pruning returned more accurate predictions. But even those were not as noise-tolerant as neural networks. Still, they have schon several beneficts. They can output accurate probablity distributions over the available choices, something neural networks can't do. \textcolor{red}{TODO: WHY???} A often mentioned benefit, that decision trees can be easily represented in a very human-understandable format, is also seen as a benefit, although in poker this might only be of use in the debugging stage.
+\cite{Davidson2002} concludes, that decision trees are not as accurate as neural networks, but are still a interesting avenue for further exploration. \cite{Ponsen2008} further explored decision trees, benchmarking a Bayes-relational opponent modeling system that predicts both actions and outcomes for human players in the game of No-Limit Texas Hold’em poker. (FIRST BUILD PRIOR, aproach explanation) They could show that after 200 games, their method already started to improve prediction rates, which is much faster than other simple statistic methods. The ones used in \cite{Billings2006b} and \cite{Schauenberg2006} required thousands of hands to improve.
+
+
+\section{Building the opponent model}
+After having explained the fundamental principles and techniques used in opponent modelling, it's time to generate a opponent model on my own. To do this, I used the \texttt{Weka Datamining Framework} (\cite{Hall2009}) - a collection of data mining algorithms and APIs. It already includes a variety of Decision Tree and Neural Network Algorithms, which allow experimentation with the techniques outlined in section \ref{opponent-modelling-techniques}. As the models can be explorted for use in our own java code, they can be reused in the final poker playing program explained later in chapter \ref{chap:implementation} about the implementation.
+
+
+\subsection{Choosing the parameters and attributes}
+Before feeding the data in whatever artificial learner created, it has to be prepared and abstracted. As mentioned before, no-limit poker holds virtually unlimited combinations of game factor - the same context rarely occurs twice. Two ways to represent abstracted game contexts have been shown. \cite{Billings2006b} and \cite{Schauenberg2006} use multiple context trees - or trie - to store various abstractions of the current game context. The two extrems are the not-abstracted game context with the exact action sequence leeding to the sequence, and the game context simply represented by the number of actions that have happened so far. Unfortunately, this representation cannot be used when preparing the data for use in the machine learning algorithms provided by Weka. Weka expects each "`instance"' (unique game context) to be a tumple, and the whole dataset to be a single relation. Nevertheless, the basic abstractions can be used for our own abstraction of a game context.
+
+\cite{Davidson2000} and \cite{Davidson2002} represent a game context as a single list, it's attributes lined out in \ref{fig:poki-input-nodes}. As this abstraction was used to train a neural network, it's basically useable as a representation of game contexts in Weka. As this model was built to be used in ring poker, includes some expert knowledge and is used in a different game solving algorith, not all attributes are usable for our model. Table \ref{table:instance-attributed}
+
+\begin{table}[ht] 
+\centering      % used for centering table
+ \begin{tabular*}{\textwidth}{c|c l l}  % centered columns (4 columns) 
+ \hline\hline                        %inserts double horizontal lines 
+ \# & Type & Name & Description \\ [0.5ex] % inserts table 
+ %heading 
+ \hline                    % inserts single horizontal line 
+ 1 & nominal & GameStage & Current betting round \newline \textit{(not used in card prediction)}  \\   % inserting body of the table 
+ 2 & numeric &  PotSize  & The current amount of chips commited to the pot \\ 
+ 3 & numeric &  BetCountOpponent  & Number of bets of the player in this hand \\ 
+ 4 & numeric &  BetCountPlayer  & Number of bets of the opponent in this hand \\ 
+ 5 & boolean & OpponentOnButton  &  If Button is at the opponent position\\ 
+ 6 & nominal & LastActionOpponent  &  last action of the opponent in this hand\\ 
+ 7 & nominal & LastActionPlayer  &  last action of the player in this hand\\ 
+ 8 & numeric & DeckStrength & Hand strength if only the board would be played \\
+ 9 & boolean & DeckPaired & true if the deck contains a pair \\
+ 10 & numeric & DeckSuited & Number of cards of the same suit in the deck \\
+ \hline  
+ 11 & nominal & PlayerAction & resulting action in this game context\linebreak \textit{(used in action prediction)} \\
+ 11 & numeric & HandStrength & shown hand strength in this game context\newline \textit{(only used in card prediction)} \\
+  \hline     %inserts single line 
+ \end{tabular*}
+\caption{Attributes of a game context Instance} % title of Table 
+  \label{table:instance-attributed}  % is used to refer this table in the text 
+  \end{table} 
+ 
+ This table is composed based on these two models, the conclusions about them in literature and my own observations during the development.
+  \textcolor{red}{TODO: explain reason for each attribute -> bullet list}
+  
+ \subsection{Aquiring a Training Dataset}
+\textit{The Annual Computer Poker Competition} is a recurring competition of the current state of the art achievements in computer poker. Each year held during a artificial intelligence conference, it's objective is to "`\textit{is to benefit artificial intelligence by promoting, aiding, and evaluating research in computer poker}."' Besides prodiving intersting results, this competition also produces a huge log of hundreds of thousands hands played. I used these logs (\cite{Hawkin2009}) to extract all game context  \texttt{HyperboreanNL} observed during the game and its responses to them. Abstracted to the attributes explained in the next section, i was able to export these samples into a \texttt{ARFF}-File - the file format used by \texttt{Weka} to describe sets of instances. Against each opponent, he aproximately faced a million game situations. The same thing was done with the cards shown after a certain course of play - normaly a number in low five figures per match. 
+
+  \textcolor{red}{TODO: include and explain snipped from .log and .arff file}
+\cite{Zinkevich2007}
+
+    \begin{lstlisting}[captionpos=b, caption="Example Gamestate-Log File", label=logFile]
+
+  ## GAMESTATE Version 2.0
+## type: DOYLE NOSTACKBOUND
+# Outcomes of hand are shown in the form:
+# <PLAYERS>:<HANDNUMBER>:<BETTING>:<CARDS>:<NETONHAND>
+# Players are listed in seat order:big blind (or button or dealer) is listed first.
+# Cards on the preflop are in seat order, divided by vertical lines |.
+# The net on won or lost on a hand (in small blinds) is last, and is in seat order.
+HyperboreanNL-BR|BluffBot4:0:b1b2r7c7/r81f:Kh2d|5dJs/9h4c3s:7|-7
+BluffBot4|HyperboreanNL-BR:1:b1b2c2c2/c2r41f:7s5h|3sAh/9d8d4h:-2|2
+HyperboreanNL-BR|BluffBot4:2:b1b2r5c5/r67f:8h9c|TsQh/8d7d2s:5|-5
+BluffBot4|HyperboreanNL-BR:3:b1b2c2r8c8/r22c22/c22c22/c22r36f:3d4d|QdJd/5h7cQc/4s/Qs:-22|22
+HyperboreanNL-BR|BluffBot4:4:b1b2r7c7/r81f:7sKd|3c3h/Ah2h9s:7|-7
+  \end{lstlisting}
+  
+  
+  \begin{lstlisting}[captionpos=b, caption="Example Arff File", label=arffFile]
+  @relation HandActions
+
+@attribute PlayerAction {f,k,c,b1,b2,b3}
+@attribute PotSize numeric
+@attribute BetCountOpponent numeric
+@attribute BetCountPlayer numeric
+@attribute OpponentOnButton {true,false}
+@attribute LastActionOpponent {f,k,c,b1,b2,b3}
+@attribute LastActionPlayer {f,k,c,b1,b2,b3}
+@attribute DeckStrength numeric
+@attribute DeckPaired {true,false}
+@attribute DeckSuited numeric
+@attribute GameStage {pf,fp,tn,rv}
+
+@data
+b3,4,1,0,true,c,k,619520,false,1,fp
+b3,4,1,0,false,k,c,692992,false,1,fp
+b3,82,2,0,false,k,b3,764208,false,1,tn
+b3,4,1,0,true,c,k,17063936,false,1,fp
+f,18,0,2,false,b1,c,803584,false,1,fp
+  \end{lstlisting}
+  
+
+\chapter{Datamining Algorithms as Opponent Models}
+
+\section{Requirements}
+
+After having learned a generic opponent model (im our case, from historic data), a player has learned the groundwork to deduce effective poker strategies by searching the game tree. But as stated before, playing the right move only garantees not loosing the game. To win, the player has to exploit specific style of the current opponent. This requires the opponent model to be ajusted during the game, not only to the current opponent, but also to the style he currently employst is common for top
+human players to radically change their style of play many times over the course of a match. A worthy adversary will constantly use deception to disguise the strength
+of their hand, mask their intentions, and try to confuse the model of their overall strategy  \cite{Billings2006}.
+
+To be effective, we need to accumulate knowledge very quickly, and have a preference toward more recent observations. Ideally, we would like to begin applying
+our experience (to some degree) immediately, and be basing decisions primarily on what we have learned over a scope of dozens or hundreds of recent games, rather
+than many thousands. This must be an ongoing process, since we may need to keep up with a rapidly changing opponent. With our data mining approach, the means making sure that our algorithm.
+
+\begin{enumerate}
+	\item Can be updated online, after having trained as a default model with batch processing.
+	\item Adapts fast, but overall still holds robust.
+\end{enumerate}
+
+After having prepared both datasets for action and hand prediction, we can train our predictor. To do this, we need to decide which learning algorithms shall be used. After some random experimentation, it quickly became clear, that the best thing would be to train a handfull of different algorithms, and benchmark them on our large database of games. Exchanging the model in the program is rather simple, and can even be done at runtime - as long as they all implement the Classifier-Interfaces of Weka.
+
+Weka comes with a multitude of different data mining algorithms. To be suitable for our opponent model, an algorithm/implementation has to fulfill a handfull of criteras: 
+\begin{itemize}
+	\item The class must be either numeric (for hand strength prediction) or nominal (for action prediction). There's no need to have both capabilites, since the models for hand and for action prediction are completely indipendant and can employ different algorithms
+	\item The classifier has to be updatable. To adapt, we need to update the opponent model during the course of the game. In Weka, this is fullfilled with the implementation of the \texttt{UpdateableClassifier}-Interface.
+	\item Execution time for the classification of an instance must be as low as possible. No-Limit Poker has a very high branching factor, and therefore a lot of nodes in its game tree. The faster classification takes time, the more nodes can be calculated in our very limited timeframe of one to a few seconds.
+\end{itemize}
+
+Weka 3.7 (the current developer-version) comes with 13 Classifiers which implement \texttt{UpdateableClassifier}, 14 including \texttt{BayesNet} which doesn't implement the interface, but comes with a method to update the classifier on a per-instance basis. Only a handfull of these though, fullfill our criterias. Some don't allow nominal classes (e.g. Winnow), and some (most of the lazy classifiers) are simply too slow. Unfortunately, the decision trees of weka aren't meant to be trained online. Unfortunately, this left back almost only NaiveBayes and BayesNet. I therefore decided to look for additional classifiers. First, I tried to build an online trainable multilayer percepron, afterwards I found and tested \textit{MOA}, a sister project of weka dedicated to online analysis of massive data streams. These two approaches are outlined in next two sections. 
+
+\begin{quotation}
+updateable: IB1, IBk, KStar, LWL, NaiveBayesMultinomialUpdateable, NaiveBayesUpdateable, nnge,
+
+no nominal classes: spegasos, winnow, AODE, AODEsr, DMNBtext, RacedIncrementalLogitBoost, 
+\end{quotation}
+
+The simple statistic methods used in \cite{Schauenberg2006} and \cite{Billings2006b} aren't used. Unfortunately, there also is neither exact specification for a reimplementation nor specific performance data (in terms of prediction accuracy) which would allow comparison to the methods used here. What can be derived from the publicized data of the programs using these models, is that they require thousands of hands of online training to break even against top opponents.
+
+\subsection{Online Backpropagation}
+
+
+
+\begin{quotation}
+We have assumed that weights are only updated after all training instances
+have been fed through the network and all the corresponding weight changes
+have been accumulated. This is batch learning, because all the training data is
+processed together. But exactly the same formulas can be used to update the
+weights incrementally after each training instance has been processed. This is
+called stochastic backpropagation because the overall error does not necessarily
+decrease after every update and there is no guarantee that it will converge to a
+minimum. It can be used for online learning, in which new data arrives in a
+continuous stream and every training instance is processed just once. In both
+variants of backpropagation, it is often helpful to standardize the attributes to
+have zero mean and unit standard deviation. Before learning starts, each weight
+is initialized to a small, randomly chosen value based on a normal distribution
+with zero mean.
+\end{quotation}
+\cite{Witten2005}
+
+Adapting old weka perceptron not successfull, used the one from http://wekaclassalgos.sourceforge.net/...
+
+
+Unlike The Decision trees alogithms supplied with weka, it's multilayer perceptron is restricted to offline learning. To adapt during a match, i therefore had to modifiy \texttt{MultilayerPerceptron} to allow updating the the weights iteratively. To achieve this, the interface  \texttt{UpdateableClassifier} was implemented  as well as publicly accessable methods for saving and restoring the weights, so progress can be controlled outside of the classifier.
+
+Unfortunately simply updating the classifier with each new observed opponent action (or card for that matter) would lead to unstable and unpredictable learning behaviour, and an approach with multiple generations or epochs can't be applied in online learning. To still allow online learning of the perceptron, i used a iterative algorithm of my own, which seperates observed opponent actions into training and validation sets and supervises the quality of the prediction at least for short-term changes.
+
+Now with a neutral measurement for the quality of training, it's possible to build a simple algorithm that further trains the offline learned perceptron according to the actions taken by the current opponent. The algorithm can be summed up as (with $n$ as the number of actions observed before updating the model):
+
+\begin{enumerate}
+	\item The first $n/2$ Actions of the opponent are recorded as a validation set
+	\item We calculate the average quadratic loss of the model on the validation set
+	\item The next $n/2$ Actions of the opponent are used to train the model
+	\item After having updated the model, we calculate the average quadratic loss over the validation set
+	\item If the loss 
+\end{enumerate}
+
+Experimentation has shown, that additional to this, a decrease of the learning rate and a increase of the momentum to offset the decreased learning rate fits well with this algorithm. 
+
+
+\subsection{Hoeffding Option Tree}
+
+Hoeffding Trees are a new approach for classiying high speed data streams. The algorithm fulfills the
+requirements necessary for coping with data streams while remaining efficient. As we see in the next 
+chapter, they only cost a fraction of computation time, while providing  accuracy competitive to very 
+cost intensive and not well adapting techniques like online/stochastic backpropagation.
+
+This state-of-the-art technique (as \cite{Bifet2009} describes it) was introduced by \cite{Domingos2000}. The Hoeffding tree induction algorithm induces a decision tree from a
+data stream incrementally, briefly inspecting each example in the stream only once, without need for storing examples after they have been used to
+update the tree. The only information needed in memory is the tree itself,
+which stores sufficient information in its leaves in order to grow, and can
+be employed to form predictions at any point in time between processing
+training examples. The resulting trees still provide classification almost as good as a tree learned by batch learning (though online learning will never be able to surpass batch learning).
+
+\subsubsection{Hoeffding Tree Induction}
+
+As described in the last chapter, each node in a decision tree contains a test to divide the instances along different paths depending on the values of a particular attribute. The crucial decision is when building a decision tree is when to split a node, and with what test condition this split should be executed. If the tests used to divide examples are based on a single attribute value, as is typical in classic decision tree systems, then the set of possible tests is reduced to the number of attributes. In this case, the problem becomes a simple selection of the right attribute to split on. To find these tests, well established criteria like the measure of information gain in the C4.5 algorithm have become popular. This measures the increase in entropy gained by the tree below a split. To calculate the information gain, the weighted average of the subset of a split are subtracted from the entropy of the class distribution $p_n$ before splitting. Such an entropy is calculated as:
+
+\begin{equation}
+entropy(p_1,p_2,...,p_n) = \sum_{i=1}^n -p_i log_2 p_i \mbox{, where $n =$ number of classes, and } \sum_{i=1}^n p_n = 1
+\end{equation}
+\cite{Bifet2009}
+
+Other algorithms also use different methods, such as the the Gini index (a measurement of the uniformity of the distrbiution). In a batch learning setting, estimating the information gain is straightforward, as one could simply choose the attribute with the highest information gain over all of the available and applicable training data. But, as \cite{Bifet2009} highlights, such an estimation is much more difficult in a online (or data stream) learning setting. Initially introduced by \cite{Domingos2000}, the Hoeffding Bound (also known as the additive Chernoff bound) is proposed to make such a similar decision as in the offline learning setting.
+
+The Hoeffding bound states that with probability $1-\delta$, the true mean of a random variable of range R will not differ from the estimated mean after n independent observations by more than
+
+\begin{equation}
+\epsilon = \sqrt{\frac{R^2ln(1/\delta)}{2n}}
+\end{equation}
+
+This bound holds true regardless of the distribution of the underlying values, and relies solely on the range of the values, number of observations and desired probability. To find the attribute to split on, the random variable being estimated is the difference in information gain between the best two attributes.
+
+For information gain the range of values ($R$) is the base 2 logarithm of the number of possible class values. With R and $\delta$ fixed, the only variable left to change the Hoeffding bound ($\epsilon$) is the number of observations ($n$). As $n$ increases, $\epsilon$ will decrease, in accordance with the estimated information gain getting ever closer to its true value.
+
+Now, a simple test allows the decision that an attribute has superior information gain compared to others, when the difference in observed information gain is more than $\epsilon$ (with confidence $1-\delta$) - we can therefore decide to use this attribute for the splitting test. This is the core principle for Hoeffding tree induction, leading to the following algorithm (from \cite{Bifet2009}.
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{section-chapter3/figures/hoeffding-tree-algo}
+\caption[Figure Caption.]{\cite{Bifet2009}}
+\label{fig:hoeffding-tree-algo}
+\end{figure}
+
+\lstset{numbers=left,breaklines=true,language=C,}
+\begin{lstlisting}
+Let HT be a tree with a single leaf (the root)
+for all training instances do
+	Sort example into leaf l using HT
+  Update sufficient statistics in l
+  Increment n_l, the number of examples seen at leaf l
+  if n_l mod n_{min} = 0 and instances seen at l not all of same class then
+    Compute G_l(X_i) for each attribute
+		Let X_a be attribute with highest G_l
+		Let X_b be attribute with second-highest G_l
+		Compute Hoeffding bound $\epsilon$ = \sqrt{\frac{R^2ln(1/\delta)}{2n_l}}
+		if ... then
+			Replace l with an internal node that splits on Xa
+			for all branches of the split do
+				Add a new leaf with initialized sufficient statistics
+			end for
+		end if
+	end if
+end for
+\end{lstlisting}
+
+
+\subsection{Alternatives to updateable models}
+
+\begin{quotation}The Bayes-relational opponent modeling approach starts from prior expectations about opponent behavior and learns a relational regression tree-function that adapts these priors to speci?c
+opponents. Our experiments show that our model adapts to speci?c player strategies relatively quickly.
+\end{quotation}
+\cite{Ponsen2008}
+
+\cite{Ponsen2008} and \cite{Southey2009} and \cite{Felix2008} \cite{Southey2005}
+
+\section{Hand Prediction}
+
+The Miximax-Algorithm by \cite{Billings2006b} presented in chapter \ref{c:imperfectinformation} requires a distribution over the strength of possible hands of the opponent at the leaf nodes. Unfortunately, the weka framework doesn't prodive any distributions for numeric predictions. Some classifier enhancer are available to predict conditional densities - but unfortunately those can't be used to calculate the density over a range of values - we would need the density between zero and the strength of our hand at the leaf. To circument this problem, i still used part of these enhancers and extendet them with some additional functionality. 
+
+The meta classifier \texttt{RegressionByDiscretization} provides a wrapper to classify a numeric attribute into different bins, making it a nominal attribute. After calculating the underlying distribution with the original classifier of the class among these bins a estimation of the distribution can be calculated.
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{section-chapter3/figures/handstrength-distribution}
+\caption[calculating the ]{}
+\label{fig:handstrength-distribution}
+\end{figure}
+
+Figure \ref{fig:handstrength-distribution} shows how to calculate the number of cards worse than ours. After having added this to our own version of \texttt{RegressionByDiscretization}, we can calulate getPercentageHigher(Instance, double value) the number of times we would beat the opponent in such a situation.
+
+TODO: explain getPercentageHigher calculations
+
+\section{Quadratic Loss Function}
+Measuring the quality of the opponent model, means evaluation the quality of the prediction of the model. As the game tree search assumes the opponent doesn't play a distinct action each time he encounters a specific situation, but varies his play over a certain distribution of action, it makes sense to also measure the quality of the opponent models distribution, and not only the amount of correctly predicted actions. Therefore, we use the quadratic loss function to measure the quality of the models prediction, as advised by \cite{Witten2005} for judging the quality of distributions (opposed to the information loss function, which is oblivious about the probabilites of the events not occured).
+
+Suppose that for a single instance (or game context) there are k possible outcomes (opponent actions), and
+for a given instance the learning scheme comes up with a probability vector $p_1$,
+$p_2$, . . . , $p_k$ for the classes (where these probabilities sum to 1). The actual
+outcome for that instance will be one of the possible classes. A second vector $a_1$,$a_2$,...,$a_k$ represents this outcome, whose ith component, where i is
+the actual outcome, is 1 and all other components are 0. The penalty assosiated with this situation can now be expressed as a loss function that depends on both the prediction as the vector $p$ and the outcome as the vector $a$.
+With the quadractic loss function, this penalty is calculated by 
+
+\begin{equation}
+\sum_{j}(p_{j}-a_{j})^2
+\end{equation}
+\cite{Witten2005}
+
+
+For the hand strengths, i additonally calculated two common statistical errors for numeric predictions, the mean square and the mean absolute error.
+
+\section{Results}
+To measure the accuracy of the opponent model, i crated a variety of models. Again i used the match logs from the 2009 anual computer poker competition. The three opponents to be modeled, are the first three finishers in the two no-limit competitons held. These three bots are:
+
+HyperboreanNL-Eqm (University of Alberta) - winner no limit run-off, runner-up in no limt bankroll
+HyperboreanNL-BR (University of Alberta) - winner in no limit bankroll, runner-up in no limt run-off
+BluffBot4 - Teppo Salonen - 3rd place in bankroll and run-off
+
+For each algorithm and opponent i created 3 models:
+
+- non adapting model: the model was trained against all opponents but the one currently used for benchmarking. this should be the benchmark of a genericly trained model against a large variety of opponents, but without any specific knowhow of the current oppoent,
+- adapting model: this model is a copy of the non-adapting model, but when benchmarking against the actions taken by the opponent, it's updated each 10th action. This is a benchmark of the actual model used during play. trained on a general assumtion of play, and adapting to the current opponent. 
+- offline model: trained with the data of all opponents in the 2009 competition, including the bot currently benchmarking. This model is a best-effort benchmark for the adapting model. the adapting model should drift near this or beat it in the course of the game.
+
+
+
+Action:
+\begin{itemize}
+	\item Datasets: adapting, non-adapting, non-adapting with all data (Graph)
+	\item Metrics: Executing Time, Quadratic Loss, , Correctly Classified Instances (adapting)
+\end{itemize}
+Hand: 
+\begin{itemize}
+	\item Datasets: adapting, non-adapting, non-adapting with all data (Graph)
+	\item Metrics: Executing Time, Mean square error,  mean absolute error, 
+\end{itemize}
+
+\begin{table}[ht] 
+\centering      % used for centering table
+ \begin{tabular*}{\textwidth}{l|r r r}  % centered columns (4 columns) 
+ \hline\hline                        %inserts double horizontal lines 
+ \#  & Execution Time (in µs)  & Average Quadratic Loss  &  Correctly Classified Instances (in \%) \\ [0.5ex] % inserts table 
+ %heading 
+ \hline                    % inserts single horizontal line 
+ Naive Bayes (Weka) & 17'000 & 0.5  & 0.5  \\   % inserting body of the table 
+ Naive Bayes (MOA) &  17'000 &  0.5  & 0.5 \\   % inserting body of the table 
+ Bayes Net &  17'000  &  0.5  & 0.5 \\ 
+ Multilayer Perceptron &  17'000  &  0.5  & 0.5\\ 
+ Hoeffding Tree & 1'700   &    0.5  & 0.5\\ 
+ Hoeffding Option Tree & 1'700   &    0.5  & 0.5\\ 
+ \end{tabular*}
+\caption{Comparison of Data Mining Algorithms in regard to opponent action prediction} % title of Table 
+  \label{table:benchmark-algorithms}  % is used to refer this table in the text 
+  \end{table} 
+  
+  \subsection{Action Model of HyperboreanNL-Eqm}
+ University of Alberta
+No Limit Runoff:  Hyperborean-Eqm
+Hyperborean-Eqm was created using the same techniques used by the University of Alberta as in the past, with the exception that it now uses soft translation. Additionally, the methods used to create the strategy have been further optimized for no-limit play.
+
+
+  \subsubsection{HoeffdingTree}
+\begin{figure}[!ht]
+\centering
+\includegraphics[height=0.4\textheight]{section-chapter3/figures/stats/HoeffdingTreeCorrectlyPredictedAction}
+\caption[Figure Caption.]{HoeffdingTreeCorrectlyPredictedAction}
+\label{fig:HoeffdingTreeCorrectlyPredictedAction1}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[height=0.4\textheight]{section-chapter3/figures/stats/HoeffdingTreeQuadraticLossAction}
+\caption[Figure Caption.]{HoeffdingTreeQuadraticLossAction}
+\label{fig:HoeffdingTreeQuadraticLossAction2}
+\end{figure}
+
+\subsubsection{NaiveBayes}
+\begin{figure}[!ht]
+\centering
+\includegraphics[height=0.4\textheight]{section-chapter3/figures/stats/MOANaiveBayesCorrectlyPredictedAction}
+\caption[Figure Caption.]{MOANaiveBayesCorrectlyPredictedAction}
+\label{fig:MOANaiveBayesCorrectlyPredictedAction3}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[height=0.4\textheight]{section-chapter3/figures/stats/MOANaiveBayesQuadraticLossAction}
+\caption[Figure Caption.]{MOANaiveBayesQuadraticLossAction}
+\label{fig:HMOANaiveBayesQuadraticLossAction4}
+\end{figure}
+
+  \subsection{Action Model of Hyperborean-BR}
+   University of Alberta
+  Hyperborean-BR employed a variety of techniques designed to exploit the traditional method of translation used by agents. This involves manipulating the pot size in ways that are indistinguishable to its opponent. In order to exploit its opponent, it performs exploration at the beginning of the match to create a rough model of its opponent.
+
+  \subsubsection{HoeffdingTree}
+\begin{figure}[!ht]
+\centering
+\includegraphics[height=0.4\textheight]{section-chapter3/figures/stats/HoeffdingTreeCorrectlyPredictedAction}
+\caption[Figure Caption.]{HoeffdingTreeCorrectlyPredictedAction}
+\label{fig:HoeffdingTreeCorrectlyPredictedAction5}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[height=0.4\textheight]{section-chapter3/figures/stats/HoeffdingTreeQuadraticLossAction}
+\caption[Figure Caption.]{HoeffdingTreeQuadraticLossAction}
+\label{fig:HoeffdingTreeQuadraticLossAction6}
+\end{figure}
+
+\subsubsection{NaiveBayes}
+\begin{figure}[!ht]
+\centering
+\includegraphics[height=0.4\textheight]{section-chapter3/figures/stats/MOANaiveBayesCorrectlyPredictedAction}
+\caption[Figure Caption.]{MOANaiveBayesCorrectlyPredictedAction}
+\label{fig:MOANaiveBayesCorrectlyPredictedAction7}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[height=0.4\textheight]{section-chapter3/figures/stats/MOANaiveBayesQuadraticLossAction}
+\caption[Figure Caption.]{MOANaiveBayesQuadraticLossAction8}
+\label{fig:HMOANaiveBayesQuadraticLossAction}
+\end{figure}
+  \subsection{Action Model of BluffBot4}
+  
+"`  The AI (artificial intelligence) used in all BluffBot versions is a non-adaptive expert system designed using the principles of game theory. This approach makes a good practical use of variety of known expert strategies exploiting weaker opponents while at the same time effectively defending itself against exploitation from adaptive opponents."'
+Teppo Salonen, bluffbot.com
+  \subsubsection{HoeffdingTree}
+\begin{figure}[!ht]
+\centering
+\includegraphics[height=0.4\textheight]{section-chapter3/figures/stats/HoeffdingTreeCorrectlyPredictedAction}
+\caption[Figure Caption.]{HoeffdingTreeCorrectlyPredictedAction}
+\label{fig:HoeffdingTreeCorrectlyPredictedAction9}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[height=0.4\textheight]{section-chapter3/figures/stats/HoeffdingTreeQuadraticLossAction}
+\caption[Figure Caption.]{HoeffdingTreeQuadraticLossAction}
+\label{fig:HoeffdingTreeQuadraticLossAction10}
+\end{figure}
+
+\subsubsection{NaiveBayes}
+\begin{figure}[!ht]
+\centering
+\includegraphics[height=0.4\textheight]{section-chapter3/figures/stats/MOANaiveBayesCorrectlyPredictedAction}
+\caption[Figure Caption.]{MOANaiveBayesCorrectlyPredictedAction}
+\label{fig:MOANaiveBayesCorrectlyPredictedAction11}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[height=0.4\textheight]{section-chapter3/figures/stats/MOANaiveBayesQuadraticLossAction}
+\caption[Figure Caption.]{MOANaiveBayesQuadraticLossAction}
+\label{fig:HMOANaiveBayesQuadraticLossAction12}
+\end{figure}
+  
+  \cite{Bifet2009}
+  
+  graphs: multilayer perceptron
+  bayes net
+  naive bayes.
+  hoeffding tree
+  hoeffding option tree
+  
+I didn't benchmark the effort it takes to train the classifier, since that always is well below the amount of time available (one training-sinstance per 2-3 seconds). 
+ 
+ 
+ 

@@ -1,0 +1,16 @@
+\chapter{Limitations and Future Work}
+\label{c:limitations} 
+
+Overall, the resulting implementation has shown acceptable performance. To further improve the strength of this approach there remain a few problems:
+
+\begin{itemize}
+\item \textbf{faster and more accurate adaption of the opponent modelling} still remains an unsolved problem. Hoeffding trees are extremely fast and provide acceptable prediction accuracy - but they don't adapt as fast as desired for poker play. Approaches with two models might like proposed by \cite{Ponsen2008}Êpromise a much faster adaption.
+
+\item \textbf{pre-flop} So far, theres still no approach using game tree search during the game to devise an opponent model based pre-flop strategy. This is especially unfortunate, because pre-flop is the stage of the game, for the lack of community cards, where the opponent model is the most important. Computing performance will stay too slow for full-fledged for some time too come. Therefore, to compute a pre-flop game tree, many more approximations need to be added to the ideas in this thesis to help them remain computationally practical. A lot of possible abstractions for this problem can be found in equilibria-based approaches (like abstracting cards and hands into buckets). 
+
+\item \textbf{bet amounts} UZHoldem uses the betting model of \cite{Gilpin2008}. While generally appropriate, it lacks a variety of characteristics which could be profitable. Since the equilibria-approach of \cite{Gilpin2008}Êdoesn't adjust to the opponent, the betting model isn't meant to adjust to the opponent either. In reality though, different opponents react different to different bet-sizes. Adding more possible betting-amounts (e.g. also one-third-pot and two-third-pot bets) might advance the exploitation skill of a poker bot. But as these additional actions grow the game tree progressively, a simple adjustment of the current betting sizes might be a more realistic approach. Additionally, as \cite{Gilpin2008} proposed a more systematic automated approach to designing betting abstractions would be preferable.
+
+\item \textbf{extending to multi-player} Like all bots based on Miximax, UZHoldem only plays  heads-up Texas Hold'em. To extend these ideas to multi-player poker, many more approximations need to be added to the ideas in this thesis to help them remain computationally practical.
+
+\item \textbf{more flexible pruning of the game tree}. The current implementation of the game algorithm bases the pruning of the game tree solely on some static properties like three depth and game stage. For No-Limit Poker, a algorithm which takes the stacks-to-blind ratio (how "deep" the players are) into consideration would be more appropriate.
+\end{itemize}

@@ -1,0 +1,34 @@
+\chapter{Conclusions}
+\label{c:conclusion} 
+
+Poker is a challenging domain in artificial intelligence research. It's properties of both chance and imperfect information makes it a good testbed for exploring decision-theory, probabilistic reasoning, risk assessment, and opponent modeling. The challenges found in poker are also present in many other fields related to decision-making, machine learning and behaviour-modelling. To solve these problems, different approaches like expert-systems, simulations and solving linear systems to find equilibria strategies have been explored in the past. 
+
+While computer poker research has progressed tremendously in the past decade, there are still major difficulties hindering the development of a player similar to good human players. One of these challenges is finding a strategy that not only plays strong poker, but also exploits the weaknesses of the current opponent as strong as possible.
+
+The method this thesis focused on consists of two main components: heuristic search for action-selection, and a model of the opponent’s play. This approach was developed by the Computer Poker Lab at the University of Alberta and has shown impressive performance in the past. 
+
+The heuristic search procedure implemented is an example of expectimax search. It takes opponent modeling information and plans a strategy that exploits that information. This thesis presented the ideas behind this approach, and explored the possibility to build an opponent model based on historic data and proven data mining algorithms. 
+
+This means that the learning algorithm of the opponent model isn't only used to update the model, but also to build it - showing a way to solve the problem of bootstrapping the opponent model. Different machine learning algorithms were explored, and a poker playing agent based on a opponent model of two Hoeffding Decision Tree models was implemented.
+
+
+The opponent modeling information used in the tree search takes the form of observations that the computer player observes in actual game play. These observations include the opponent’s actions, the cards dealt at chance nodes, and the cards revealed by the opponent at showdowns. These observations are added to the model both when building the opponent model by observing historic data and during the game after each hand is played.
+
+To apply the ideas to No-Limit Texas Hold’em, approximations were necessary to keep them practical.  Unlike other work about stochastic search in Texas Hold'em, this thesis focused on the No-Limit variant of the game and adapted techniques from other No-Limit approaches (like $\epsilon$-equilibria calculations) to a tree search based solution. 
+
+No-Limit Texas Hold’em is too large to do a full-depth full-width action-selection search, so the search procedure had to be based on a approximated game tree. These approximations include approximating the possible cards at chance nodes, pruning the game tree based on the opponent action distribution and discretizing the possible continuous betting amounts possible in classes of actions.
+
+The complexity of a game sitation in Texas Hold’em also means that generalization had to be added to the opponent model. With a finite set of attributes, the number of game contexts could be shrunk to a finite amount of different situations an opponent might encounter.
+
+Overall, the resulting computer player implemented using the ideas in this thesis contains minimal expert knowledge. Unlike other approaches like \cite{Schauenberg2006}, no expert knowledge was required to build the initial default opponent model.
+
+Instead of manufacturing a default opponent model with expert knowledge or equilibria calculations, a offline-learner was developed, capable of parsing past games played at the Annual Computer Poker Competition and learning an opponent model based on the decision made by the contestants at these events.
+
+The only expert-knowhow used was the generalization of game contexts in the opponent model, the possible discretized betting amounts and the very simplistic pre-flop strategy of the player.
+
+To evaluate the strength of the implementation, a benchmark tournament with a variety of poker bots was conducted. In this setting, the implementation played against different other agents, ranging from very simple sample enemies (always calling or always folding),  simple strategic bots (either pushing all-in or folding, based on a strategy from poker literature) to commercial bots used to train poker players.
+
+UZHoldem, the name of the implementation, has fared well to acceptable against all opponents. Against humans, it has shown a rather weak performance compared to a regular player, but was fond of the basics of poker.
+
+For further conclusions, the performance of the opponent model in the benchmark tournament was also examined, showing some improvement of the prediction accuracy, but not enough to result in a significant gain in the turnout of actions.
+

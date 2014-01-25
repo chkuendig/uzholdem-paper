@@ -1,0 +1,201 @@
+
+\chapter{Implementation}
+\label{chap:implementation} 
+
+When implementing the Miximax algorithm presented in chapter \ref{c:game-tree-search}, one quickly realizes that poker unfortunately is too complex to be completely represented in a search tree.
+
+The standard rules of Limit Hold'em allow for a maximum of four bets per player per round. Thus, in 2-player Limit poker there are 19 possible betting sequences, of which two do not occur in practice (e.g. check-fold). Of the remaining 17 sequences, 8 end in a fold (leading to a terminal node in the game tree), and 9 end in a call (carrying forward \cite{Billings2006}. This gets repeated in each stage of the game. In No-Limit Texas Hold'em, such calculations aren't possible, as theres no maximum of bets, and a unlimited number of bets per stage. But it is obvious that compared to Limit Hold'em, No-Limit results in a much more complex tree than Limit Hold'em, even with abstracted actions and a limited amount of bets.
+
+
+\begin{table}[!ht]
+  \begin{tabular}{ l|l}
+\textbf{Decision Point Where Search is Invoked}Ê& \textbf{\# of Leaves in Search Tree}Ê\\
+ \hline
+ start of game before preflop cards are dealt & $\approx$ 697 trillion\\
+after preflop cards are dealt & $\approx$ 525 billion\\
+before flop cards are dealt & $\approx$ 58.5 billion\\
+after flop cards are dealt & $\approx$ 2.98 million\\
+before turn card is dealt & 331'162\\
+after turn card is dealt & 7'046\\
+before river card is dealt & 782\\
+after river card is dealt & 17\\
+ \end{tabular}
+ 
+\caption{Number of Leaves in 2-player Texas Hold'em Search Tree when First to Act (calculated by \cite{Schauenberg2006})}
+
+
+\label{fig:leaves-count}
+\end{table}
+
+\begin{table}[!ht]
+  \begin{tabular}{ l|l}
+\textbf{Decision Point Where Search is Invoked}Ê& \textbf{\# of Leaves in Search Tree}Ê\\
+ \hline
+after preflop cards are dealt and check & $\approx$ 292 billion\\
+after flop cards are dealt and check & $\approx$ 1.656 million\\
+after turn card is dealt and check & 3'914\\
+after river card is dealt and check & 9\\
+ \end{tabular}
+ 
+\caption{Number of Leaves in 2-player Texas Hold'em Search Tree when Second to act Following a Check (calculated by \cite{Schauenberg2006})}
+
+
+\label{fig:leaves-count2}
+\end{table}
+
+In chapter \ref{c:game-tree-search}, I always assumed to build a game-tree of all possible actions, both for the player as well as for the opponent. Unfortunately, this is not feasible when trying to actually implement such an algorithm. Poker, even limit-poker is far to complex to completely model. Table \ref{fig:leaves-count} shows the number of leave nodes different game trees at certain stages in the game, as calculated by \cite{Schauenberg2006} for Limit Texas Hold'em.
+
+When facing implementation two things have to be taking into consideration. First: all these nodes have to be initiated and traversed, as well as all opponent nodes being subject to a (more or less) sophisticated opponent prediction model. Second: For limit poker, the number of actions is always limited to 3 (fold/check/bet or fold/call/raise), with folding obviously being dominated when checking is possible. In no-limit, the number of actions is dependent on a players stack size (in relation to the blinds), but virtually infinite. These leads to two practical search challenges:
+
+\begin{itemize}
+	\item The number of possible actions has to be shrunk to a reasonable amount, to keep the branch factor at least under control.
+	\item Even after limiting the number of possible action, at least on the preflop and flop-stage, the game tree cannot be fully traversed. 
+\end{itemize}
+
+\section{The Action Model}
+\label{s:ActionAbstraction} 
+
+In limit Texas Hold'em, the players only ever have at most three possible actions available to them (fold, call, or raise). This controllable branching factor, allows for a full representation of the game - at least in situation where simulations can be reused - like in equilibrium calculations done offline.
+
+In No-Limit Texas Hold'em, on the other hand, the number of actions available to the players can be huge. For example, given a blind-level of 1\$-2\$ the small blind makes his first action, he can fold, call, or raise to any (integral) amount between 1 and 198, for a total of 199 possible actions (assuming stacks limited to 100 big blind, and if the bets were not limited to be integral amounts then the branching factor would actually be infinite). And this branching factor would actually occur at every decision node in the game tree.
+
+\cite{Gilpin2008} estimates, with bets limited to integers, the size of the not abstracted game tree of no-limit heads-up Texas Hold'em to be approximately $10^71$ nodes.
+
+Thanks to game theoretic realities, only a limited amount of actions make sense in no limit poker. Both bets too small, as well as to big (relative to the pot size) are usually a bad idea \cite{Sklansky1999} \cite{Chen2006} \cite{Sklansky2006}. When facing such a bet, the opponent has favorable pot odds (the relation of the amount an opponent has to call to the amount already in the pot) to make a call. Whatever we think he holds, or he thinks we hold, the amount to pay to see the next card is justifiable with simple statistics.
+
+These poker theoretic fundamentals allow us to limit the branching factor of  the tree significantly by discretizing betting amounts into a very limited number of abstracted actions. My abstracted actions include the three bet amounts used  by \cite{Andersson2006}. This abstraction of the real game, now finally allows us to see predicting the opponent actions as as classification problem. We can simply classify the (abstracted) game situation represented by a opponent node into action classes. These Action Classes, include the following actions:
+
+\begin{itemize}
+	\item \textit{Fold:} laying down cards when the opponent called.  No abstraction is required here, since there's only one way to fold (a player can't fold only part of a wager). 
+	\item \textit{Check:} not waging any bet, passing the action on to the opponent. This does not need to be abstracted either.
+	\item \textit{Call:} paying the opponents wager. Also no abstraction involved, as there is only one legal way to call a bet.
+	\item \textit{Bet/Raise:} while technically two different actions, there is only one single action that is legal. The betting amount though is only governed by the amount of the big blind and the stack of the opponent - meaning that the betting amount must be abstracted, to lower the theoretically infinite branching factor.
+\end{itemize}
+
+To abstract the betting amounts, the game tree only models oppont and player actions in the following amounts also used by \cite{Gilpin2008} and \cite{Andersson2006} and also regarded as roughly best-practice in poker literature (e.g. by \cite{Sklansky2006}, \cite{Harrington2004}):
+
+\begin{itemize}
+	\item \textit{Bets equal to half of the pot} are good value bets, as well as good bluffs. When a player has a strong hand, by placing a half-pot bet he is giving the opponent 3:1 odds. What that means is, that the opponent only needs a better hand in 25\% of the cases, making it an attractive call. On the other hand, they are also an interesting bluff: They only need to work one time in three in order for it to be a profitable play.
+		\item \textit{Bets equal to the size of the current pot} are useful, when a player currently has a stronger hand than his opponent and the deck suggests his opponent might "draw out". By placing a pot bet, the player is taking away the odds that the opponent would need to rationally call the bet with almost any drawing hand, that is, a hand that is not good currently, but has the potential to improve with additional cards.  It is usually not necessary to bet more than this amount, and a higher bet would only put the cost higher in case the player is not holding the leading hand as expected.
+		
+		Pot bets are particularly useful pre-flop when the big blind, who will be out of position (i.e., acting first) in
+later betting rounds, wishes to make it more expensive for the small blind to play a particular hand.
+	\item \textit{Going all-in} usually is not a good idea. If the opponent makes the call, he most likely has a better hand, and if he does not make the call, there was usually put too much money on the line to take down a rather small pot. However, it is a commonly used move (often by beginners). In some situations, where the pot is relatively large relative to a players remaining chips, it's better to go all-in, then to be forced to call with the remaining chips. 
+	
+	Another good reason for including the all-in bet in the model is that it provides a level of robustness in the model. 
+	\end{itemize}
+
+Since these three amounts are only a crude estimation of all possible moves, \cite{Gilpin2008} also outlined some of the other possible amounts, and why they are not included in the abstraction:
+
+
+\begin{itemize}
+\item \textit{Small Bets} in relation to the pot are usually a bad move. When the opponent faces such a bet, he usually has terrific pot odds to call them. Since he only pays relatively little for a chance to win a larger pot, he can also play cards with a low chance of improving. Additionally, a small bet provides little gain if called. If the opponent calls because he believes to have a better hand, he probably would also have called a larger hand.
+\item \textit{Large Bets} in relation to the pot, but not all-in usually drain a players stack fast. Once a player's quantity of remaining chips gets low in relation to the pot, he is in a situation known as pot-committed. When facing a subsequent bet of any size, the player will be facing great odds, because he can call with whatever he has left, even if that amount is drastically smaller than the pot.  In this sense, a rational player who is pot-committed is basically in the same situation as a player who went all-in already. Thus bets that lead to pot-committed situations are, in a sense, nearly redundant. 
+
+For this reason, \cite{Gilpin2008} advocates to not allow bets that place a player or opponent in a pot-committed situation. To prevent this, I added an amount the player must have after adding another child to a decision node. If this condition can't be fulfilled, the action would not be added, and implicit be included in the all-in action, which will always be added. Since stacks in the test setting are synchronous, this also asserts that the opponent wont be  put in such a situation if he calls.
+\end{itemize}
+
+
+These three bets together with call, fold or check define the maximal number of children of any (player or
+opponent) decision node. 
+
+Other approaches also abstract the amount of actions a players and opponents can take during a betting round (stage). In Limit-Poker there each player is allowed to only bet 4 times each stage. Most literature (\cite{Billings2006b}, \cite{Schauenberg2006}, \cite{Johanson2007}) for limit bots only simulate 3 bets per stage. In No-Limit Poker, there's no-limit on how many bets players can make. Theoretically, they could each raising by the big blinds for dozens of times, until one of them is all-in. \cite{Gilpin2008} like his colleagues researching limit poker, also advocated a limit of 3 bets per stage. But in a footnote obviously added later on, he notices that in reality the abstracted betting model limits the amount of possible actions anyway, since the players are all-in after 3 or 5 bets.
+
+I implemented such a limit, but later on disabled it, since I found out that it does not provide any significant limitations of the game tree for the same reasons as \cite{Gilpin2008} noted.
+
+So, taking the above considerations all into account, the final betting model allows for the following actions (and therefore branches in the game tree):
+
+\begin{enumerate}
+	\item Both players always have the option of going all-in
+	\item When no bets have been placed within a betting round, a player can either check, bet half the pot, bet the amount currently in the pot or go all-n.
+	\item After a bet has been placed already in the current stage, a player can either fold, call, bet the pot or go all-in.
+	\item If at any bet (all-in excluded) would commit more than half of a players stack, that bet would not be added to the game tree.
+\end{enumerate}
+
+With more incorporation of domain knowledge, this model could probably be refined further. Perhaps, against some opponents, one-third or two-third bets might be better than always assuming a bet of half the size of the pot.
+
+
+\subsection{Reverse Mapping of Actions}
+\label{s:ActionAbstraction2} 
+
+Obviously, in the real game an opponent (or an observed player when building the prior of the opponent model) does not follow these abstractions of the action model. These actions still have to be mapped to actions in the abstracted game used in the game tree and the opponent model.
+
+For example, if the betting model contains half-pot bets and pot bets, how should situations be handled, when the opponent makes a bet of three-fourths or two-thirds of the pot?
+
+\cite{Gilpin2008} devised a relatively clever model to map these actions into a abstracted game. Obviously, the basic idea is to map actions to the nearest possible action in terms of amount contributed to the pot. In this simple fashion, if the betting model contains half-pot bets and pot bets, and somebody bets four-fifths of the pot, this could be treated as a pot-size bet, with ties being broken arbitrarily.
+
+But, as \cite{Gilpin2008} notes, this mapping would be greatly exploitable. Considering a situation on the flop with little action pre-flop, so the pot is now 10. The acting player could now either bet half-pot (five chips), bet pot (10 chips) or bet all-in (in the annual computer competition, this would be 390 chips). Clearly, there is a large difference between contributing 10 or 390 chips. Now, if the player bets 190 chips, this move would be considered a pot-bet, if the deciding measure is the absolute distance to the two abstracted actions.  However, the bet is so large relative to the pot that for all practical purposes it would be more suitably treated as an all-in bet. If the opponent knows that we treat it as a ten-chip bet, he can exploit us by using the 190-chip bet because we would call that with hands that are too weak.
+
+This problem could be address with randomization. A supposed action of $c$ chips would then be mapped to one of the two possible amounts $d_1$ and $d_2$ (with $d_1 < c < d_2$) with a chance of $p$ = $\frac{c-d_1}{d_2-d_1}$s for $d_1$ and 1-$p$ for the second action $d_2$. This would mitigate the above example of exploitation. However, as \cite{Gilpin2008} notes, this would still treat the over-bet half of the time as a pot size bet.
+
+As a solution, \cite{Gilpin2008} therefore suggested an approach mapping the actions according to the relative distance instead of the absolute one.
+
+Reconsidering the above situation, where a player contributes $c$ chips, and the two surrounding actions in the model are bets of the amount $d_1$ and $d_2$ with $d_1 < c < d_2$. \cite{Gilpin2008} would then compute the ratios $\frac{c}{d_1}$ and $\frac{d_2}{c}$ and choose the action corresponding to the smallest ratio. In the example where a player contributes 190 chips to a pot of 10, the two ratios would be $\frac{190}{10} = 19.0$ and $\frac{390}{190} = 2.05$. Therefore the action would be classified as a all-in move, as desired.
+
+\section{Building the Game Tree}
+\label{s:TreeSampling} 
+
+
+Revisiting \cite{Schauenberg2006}'s table \ref{fig:leaves-count}, we can clearly see that the the game is too large to search completely to the leaves from early parts in the game in the amount of time that a program would routinely be allowed to make a poker decision (i.e., around one second). Search times start becoming reasonable for a real-time decision once the search is invoked at a decision point after the flop cards are dealt (assuming a relatively efficient search and opponent model). And in No-Limit Poker, this problem inherently is much larger. 
+
+Evaluation functions are a common approach to tackle this problem of unfeasible large game trees. The search tree then would only be build to a certain depth, and then call a evaluation function to estimate the value that would be backed up for the subtree. 
+
+Unfortunately, there's almost no research in evaluation functions for poker. Implementing a proper evaluation function can be very difficult, and usually requires a great deal of domain knowledge. To prevent this, I instead  have chosen a similar approach as \cite{Schauenberg2006}. Thereby, all nodes are followed until a leaf node can be found, where it is easier to estimate the values needed to start the backup procedure. 
+
+For searches invoked on the turn or river, this is not a problem since a full-width and full-depth search finishes very quickly. Unfortunately, for searches invoked on flop, the search must be modified to make it possible to both search down to leaf nodes and finish in a reasonable amount of time.
+
+First for search trees built during the flop stage, sampling is used to deal only a subset of the total possible river cards, with the turn being dealt completely. The search proceeds normally up to a river chance node, where only a random subset of all 46 cards are dealt. This subset usually is 26 (half a full deck), but can be easily adjusted for changes at other points in the algorithm (like a more efficient opponent model), or different hardware resources. 
+
+Unfortunately, this still didn't provide enough shrinkage. \cite{Schauenberg2006} went as far as down to only dealing six river cards. As that seemed to be too huge introduction of chance into the assessment of moves, I decided to choose a different approach. I still deal 26 cards, but instead, after a certain depth of the tree, I start sampling at the decision nodes as well. \cite{Schauenberg2006} also advocates pruning the tree according to the opponent model, but refers to future research for this, and only cuts children with a possibility of being played of 0. 
+
+One proposed example is a opponent which would always check or call. As the opponent model catches on to this habits, a perfect opponent model would return this opponent's observed relative action frequencies for any particular decision as 0\% for fold, 100\% for check/call, and 0\% for bet/raise. 
+
+Recalling how the Miximax search backs up the value for an opponent decision node, it is easy to see that the subtrees under the opponent's fold and raise branches would never have to be searched because no matter what value is returned for those subtrees, it would be multiplied by its probability of occurrence, which in this case would be 0\%.
+
+I have chosen to both cut the tree at player as well as at opponent decision nodes, given the search has progressed down the tree far enough (usually at level 6, but that can as well be adjusted - e.g. less would be dealt, but the decision nodes wouldn't be cut). If the search has progressed far enough the tree, only a subset of actions would further be consulted. For this case, a threshold opponent actions have to reach (like 2\%) and a percentage amount of the player actions to create children for (like 75\% of actions).
+
+This approach obviously holds lots of variables to be tuned (how many cards are dealt at both stages, at what three depth and threshold opponent actions and how many player actions are cut off). The values used in the actual program were found with a little experimentation, but further research here would be necessary to find a truly balanced system to prune the search tree.
+
+Another aspect which would have to be taken into consideration is the ratio of the pot and the blinds to the remaining stacks of the player and the opponent. In limit poker, theres always only a limited amount of actions available (4 in the real game, 3 in most abstractions), in no-limit, this ratio defines how many actions players possibly will play. If they are "deep-stacked" (the stacks are large in relation to the bets), the search tree grows much deeper, than in a  "short-stacked" game. An autonomous adaption of the pruning variables to this ratio should be an interesting addition to the very flexible pruning method described above.
+
+For my current implementation, I have chosen static parameters, which work in a game with 200 big blinds for each player. This is a generally pretty solid assumption for human games, and also the way the no-limit tournaments of the \textit{Annual Computer Poker Competition} are played. 
+
+
+\section{Other Optimizations}
+
+\subsection{Implementaton of Pre-Flop Play}
+Unfortunately, like \cite{Schauenberg2006} and \cite{Billings2006b}, which both also apply the search-based approach explained in \ref{c:imperfectinformation}, we have seen that  searching the game tree during the game puts some restriction on the size of it. After the flop, this search tree is large, but still possible to search, if some pruning is applied. 
+
+For pre-flop decisions, this is unfortunately not possible. While there are only 47 possible turn cards, and 46 possible river (so, in total 2162 possible card combinations to be dealt), there are over 19600 ($c(50,3)$) possible flops, each with a full post-flop gametree. Even with the most sophisticated pruning algorithm, there isn't any satisfactory way, to shrink that tree to the size of a (already pruned) post-flop tree.
+
+For this reason, \cite{Schauenberg2006} and \cite{Billings2006b} use the pre-flop strategy of the University of Alberta devised for other, $\epsilon$-Nash-Equilibria agents. With no access to these algorithms, I opted for a much simpler approach to pre-flop play. 
+
+Essentially, there's only a very small set of different situations a poker player can encounter in heads-up pre-flop play. There are 1326 ($c(52,2)$) different hole card combinations a player can be dealt. But as there are are no community cards, the hand only consists of two cards, so the four different suit of cards don't all have to be considered. There are only hands where both cards have the same suit, or different suits. Taking this into consideration, there are 169 non-equivalent starting hands in hold 'em (13 pocket pairs, $\frac{13 × 12 }{ 2} = 78$ suited hands and 78 unsuited hands as well; $13 + 78 + 78 = 169$). (6 possible combinations of each pair, 4 possible combinations of each suited hand and 12 possible combinations of each off-suit hand. $(13 * 6) + (78 * 4) + (78 * 12) = 1 326$) 
+
+\subsubsection{Pre-Flop Strategy}
+To basically exclude pre-flop play from the problem domain of this thesis, I decided to only implement a very crude pre-flop strategy.
+
+After determing the relative strength of the players pair of hands \footnote{I use a simple roll-out simulation of each possible hand against each possible hand to determine this strength. Another possibility would be the expert-engineered Sklansky-Chubukov Hand Rankings found in \cite{Sklansky1999}. But as \cite{Carter2007}Êshows, both methods correlate to a great extend }, a crude ruleset is applied to support the decision making.
+
+\begin{itemize}
+\item If the opponent has raised more than 100 big blinds (basically going all-in), the program calls only the best 15\% of its hands. Everything weaker it folds.
+\item Bets are always 3 big blinds, raises twice the amount required to call.
+\item When the program holds an very strong hand (top 5\% of possible hands), it raises 80\% of the time.
+\item If the program holds a somewhat reasonable, but not very strong hand (better than weakest 35\% of possible hands), it randomly raises one third of the time, and calls the rest.
+\item In case of a very weak hand (worst 35\% of possible hands), in 10\% of these cases, the algorithm raises, else it simply folds.
+\end{itemize}
+
+As the next chapter will show, this strategy is too weak for even intermediate opponents. As the aim of this thesis is too implement as little domain knowledge as possible, I still have decided to rather focus the limited resources on other aspects of the program, instead of improving the pre-flop play. 
+
+
+
+\subsection{Multi-Threaded Tree search}
+Since most modern computers have more than one core, and the current processor technologies more advance in the direction of more cores instead faster clock counts, I also explored an implementation of the game tree capable to be built and searched multi threaded. After an initial implementation, I noticed various disadvantages of such an approach: 
+\begin{itemize}
+\item Splitting the game tree into multiple subtrees is a non-trivial problem. Since the game tree isn't balanced, some subtrees can hold only a one or two nodes, while others might hold hundreds of thousands of them. This problem could be mitigated by keeping account of a pool of threads, and further split a subtree into more threads, when a thread from another subtree has finished.
+\item As the depth of a game sub trees vary greatly and isn't known at the start of the calculation, a lot of threads eventually need to be started. This spawning and finishing and keeping account of each thread unfortunately costs too much performance, and lowers the marginal performance increase greatly.
+\item Most classifiers in \textit{Weka} aren't thread safe and block for classification. This completely removes the possibility improve performance for one of the costly computation step (hand and action classification together costs about 40\% of the computation time)
+\item Thanks to the creation (and destruction) of hundreds of thousands of new nodes, and their java objects, the (multi threaded) garbage collection of java already profits from multiple cores by using up to 30-50\% of the second core in a dual-core machine. For a machine with no more than 2 cores, this means that theres only about 50\% left of idle cpu time to use anyway.
+\end{itemize}
+
+For all of these reasons, I decided to abandon this approach, and focused on generally reducing computation time (using as many primitives as possible, e.g. using array instead of Vectors or ArrayLists)
