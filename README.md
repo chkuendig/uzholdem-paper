@@ -8,4 +8,4 @@ The properties of stochasticity and imperfect information pose new challenging q
 >This thesis presents the necessary algorithms to tackle these problems with the use of modified game tree search and opponent modeling. A proof-of-concept implementation for the game of No-Limit Texas Hold’em is provided (and benchmarked), based on the Miximax algorithm and an opponent model implemented as a Hoeffding tree.
 
 
-[Publication Details](http://www.merlin.uzh.ch/publication/show/2428) | [PDF Download](http://christian.kuendig.info/files/master-thesis.pdf)
+[Publication Details](http://www.merlin.uzh.ch/publication/show/2428) | [PDF Download](http://christian.kuendig.info/files/master-thesis.pdf) | [Source Code & Data](http://github.com/chkuendig/uzholdem)
